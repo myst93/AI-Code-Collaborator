@@ -425,21 +425,21 @@ function App() {
   const toggleInterviewMode = () => {
     if (!isInterviewMode) {
       // Enter Interview Mode: Request Fullscreen
+      // State is updated by the fullscreenchange event listener, not here
       const element = document.documentElement;
       if (element.requestFullscreen) {
         element.requestFullscreen().catch((err) => {
           console.error("Error entering fullscreen:", err);
         });
       }
-      setIsInterviewMode(true);
     } else {
       // Exit Interview Mode: Exit Fullscreen
+      // State is updated by the fullscreenchange event listener, not here
       if (document.exitFullscreen) {
         document.exitFullscreen().catch((err) => {
           console.error("Error exiting fullscreen:", err);
         });
       }
-      setIsInterviewMode(false);
     }
   };
 
