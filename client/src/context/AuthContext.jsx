@@ -2,74 +2,15 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 
 const AuthContext = createContext(null);
 
-// Deterministic avatar color from name string
-const getAvatarColor = (name) => {
-  const palette = [
-    '#6366f1', '#8b5cf6', '#ec4899', '#f43f5e',
-    '#10b981', '#06b6d4', '#f59e0b', '#3b82f6',
-  ];
+function getAvatarColor(name) {
+  if (!name) return '#6366f1';
+  const palette = ['#6366f1', '#8b5cf6', '#ec4899', '#f43f5e', '#10b981', '#06b6d4', '#f59e0b', '#3b82f6'];
   let hash = 0;
-  for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  for (let i = 0; i < name.length; i++) {
+    hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  }
   return palette[Math.abs(hash) % palette.length];
-};
-
-export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null);
-  const [showAuthModal, setShowAuthModal] = useState(false);
-  const [authCallback, setAuthCallback] = useState(null);
-
-  // Restore session from localStorage on mount
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem('devsync_user');
-      if (saved) setUser(JSON.parse(saved));
-    } catch {
-      localStorage.removeItem('devsync_user');
-    }
-  }, []);
-
-  // Open the Google sign-in modal; optional callback fires after sign-in
-  const openSignIn = useCallback((onSuccess) => {
-    setAuthCallback(() => onSuccess || null);
-    setShowAuthModal(true);
-  }, []);
-
-  const handleSignIn = useCallback((name, email) => {
-    const newUser = {
-      name: name.trim(),
-      email: email.trim(),
-      avatar: name.trim().charAt(0).toUpperCase(),
-      avatarColor: getAvatarColor(name.trim()),
-      signedInAt: new Date().toISOString(),
-    };
-    localStorage.setItem('devsync_user', JSON.stringify(newUser));
-    setUser(newUser);
-    setShowAuthModal(false);
-    if (authCallback) {
-      authCallback(newUser);
-      setAuthCallback(null);
-    }
-  }, [authCallback]);
-
-  const signOut = useCallback(() => {
-    localStorage.removeItem('devsync_user');
-    setUser(null);
-  }, []);
-
-  return (
-    <AuthContext.Provider value={{ user, openSignIn, signOut, isAuthenticated: !!user }}>
-      {children}
-      {showAuthModal && (
-        <GoogleAuthModal
-          onSignIn={handleSignIn}
-          onClose={() => setShowAuthModal(false)}
-        />
-      )}
-    </AuthContext.Provider>
-  );
 }
-
-// ─── Google-styled Auth Modal ──────────────────────────────────────────────
 
 const MOCK_ACCOUNTS = [
   { name: 'Alex Johnson', email: 'alex.johnson@gmail.com' },
@@ -77,27 +18,29 @@ const MOCK_ACCOUNTS = [
   { name: 'Chris Lee', email: 'chris.lee@gmail.com' },
 ];
 
+// ─── Google Auth Modal ─────────────────────────────────────────────────────
+
 function GoogleAuthModal({ onSignIn, onClose }) {
-  const [step, setStep] = useState('choose'); // 'choose' | 'custom'
+  const [step, setStep] = useState('choose');
   const [customName, setCustomName] = useState('');
   const [customEmail, setCustomEmail] = useState('');
   const [error, setError] = useState('');
 
-  const handleAccountClick = (account) => {
+  function handleAccountClick(account) {
     onSignIn(account.name, account.email);
-  };
+  }
 
-  const handleCustomSubmit = (e) => {
+  function handleCustomSubmit(e) {
     e.preventDefault();
     if (!customName.trim()) { setError('Please enter your name'); return; }
     if (!customEmail.trim() || !customEmail.includes('@')) { setError('Please enter a valid email'); return; }
     onSignIn(customName, customEmail);
-  };
+  }
 
   return (
     <div className="auth-modal-overlay" onClick={onClose}>
-      <div className="auth-modal-card" onClick={(e) => e.stopPropagation()}>
-        {/* Google Logo */}
+      <div className="auth-modal-card" onClick={function(e) { e.stopPropagation(); }}>
+
         <div className="auth-modal-logo">
           <svg width="40" height="40" viewBox="0 0 48 48">
             <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
@@ -112,39 +55,38 @@ function GoogleAuthModal({ onSignIn, onClose }) {
         <p className="auth-modal-subtitle">to continue to DevSync AI</p>
 
         {step === 'choose' ? (
-          <>
+          <div>
             <div className="auth-accounts-list">
-              {MOCK_ACCOUNTS.map((acct) => (
-                <button
-                  key={acct.email}
-                  className="auth-account-row"
-                  onClick={() => handleAccountClick(acct)}
-                >
-                  <div
-                    className="auth-account-avatar"
-                    style={{ backgroundColor: getAvatarColor(acct.name) }}
+              {MOCK_ACCOUNTS.map(function(acct) {
+                return (
+                  <button
+                    key={acct.email}
+                    className="auth-account-row"
+                    onClick={function() { handleAccountClick(acct); }}
                   >
-                    {acct.name.charAt(0)}
-                  </div>
-                  <div className="auth-account-info">
-                    <span className="auth-account-name">{acct.name}</span>
-                    <span className="auth-account-email">{acct.email}</span>
-                  </div>
-                </button>
-              ))}
+                    <div
+                      className="auth-account-avatar"
+                      style={{ backgroundColor: getAvatarColor(acct.name) }}
+                    >
+                      {acct.name.charAt(0)}
+                    </div>
+                    <div className="auth-account-info">
+                      <span className="auth-account-name">{acct.name}</span>
+                      <span className="auth-account-email">{acct.email}</span>
+                    </div>
+                  </button>
+                );
+              })}
             </div>
 
             <div className="auth-divider">
               <span>or use a different account</span>
             </div>
 
-            <button
-              className="auth-use-another"
-              onClick={() => setStep('custom')}
-            >
+            <button className="auth-use-another" onClick={function() { setStep('custom'); }}>
               + Use another account
             </button>
-          </>
+          </div>
         ) : (
           <form className="auth-custom-form" onSubmit={handleCustomSubmit}>
             <div className="input-group">
@@ -154,7 +96,7 @@ function GoogleAuthModal({ onSignIn, onClose }) {
                 type="text"
                 placeholder="e.g. John Doe"
                 value={customName}
-                onChange={(e) => { setCustomName(e.target.value); setError(''); }}
+                onChange={function(e) { setCustomName(e.target.value); setError(''); }}
                 autoFocus
               />
             </div>
@@ -165,7 +107,7 @@ function GoogleAuthModal({ onSignIn, onClose }) {
                 type="email"
                 placeholder="e.g. john@gmail.com"
                 value={customEmail}
-                onChange={(e) => { setCustomEmail(e.target.value); setError(''); }}
+                onChange={function(e) { setCustomEmail(e.target.value); setError(''); }}
               />
             </div>
             {error && <p className="auth-error">{error}</p>}
@@ -175,21 +117,92 @@ function GoogleAuthModal({ onSignIn, onClose }) {
             <button
               type="button"
               className="auth-back-btn"
-              onClick={() => setStep('choose')}
+              onClick={function() { setStep('choose'); }}
             >
               ← Back
             </button>
           </form>
         )}
 
-        <button className="auth-modal-close" onClick={onClose} aria-label="Close">✕</button>
+        <button className="auth-modal-close" onClick={onClose} aria-label="Close">
+          ✕
+        </button>
       </div>
     </div>
   );
 }
 
+// ─── AuthProvider ──────────────────────────────────────────────────────────
+
+export function AuthProvider({ children }) {
+  // Synchronous initialization from localStorage prevents null state mismatch on frame 1
+  const [user, setUser] = useState(function() {
+    try {
+      const saved = localStorage.getItem('devsync_user');
+      return saved ? JSON.parse(saved) : null;
+    } catch (err) {
+      return null;
+    }
+  });
+
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [pendingCallback, setPendingCallback] = useState(null);
+
+  const openSignIn = useCallback(function(onSuccess) {
+    if (typeof onSuccess === 'function') {
+      setPendingCallback(function() { return onSuccess; });
+    } else {
+      setPendingCallback(null);
+    }
+    setShowAuthModal(true);
+  }, []);
+
+  const handleSignIn = useCallback(function(name, email) {
+    const trimmedName = (name || 'User').trim();
+    const newUser = {
+      name: trimmedName,
+      email: (email || '').trim(),
+      avatar: trimmedName.charAt(0).toUpperCase(),
+      avatarColor: getAvatarColor(trimmedName),
+      signedInAt: new Date().toISOString(),
+    };
+    try {
+      localStorage.setItem('devsync_user', JSON.stringify(newUser));
+    } catch (err) {
+      // ignore storage errors
+    }
+    setUser(newUser);
+    setShowAuthModal(false);
+    if (pendingCallback) {
+      try {
+        pendingCallback(newUser);
+      } catch (e) {
+        console.error('Auth callback error:', e);
+      }
+      setPendingCallback(null);
+    }
+  }, [pendingCallback]);
+
+  const signOut = useCallback(function() {
+    try { localStorage.removeItem('devsync_user'); } catch (err) {}
+    setUser(null);
+  }, []);
+
+  return (
+    <AuthContext.Provider value={{ user: user, openSignIn: openSignIn, signOut: signOut, isAuthenticated: !!user }}>
+      {children}
+      {showAuthModal && (
+        <GoogleAuthModal
+          onSignIn={handleSignIn}
+          onClose={function() { setShowAuthModal(false); }}
+        />
+      )}
+    </AuthContext.Provider>
+  );
+}
+
 export function useAuth() {
   const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error('useAuth must be used within AuthProvider');
+  if (!ctx) throw new Error('useAuth must be used inside AuthProvider');
   return ctx;
 }

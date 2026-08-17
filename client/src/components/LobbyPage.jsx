@@ -8,6 +8,13 @@ export default function LobbyPage({ onJoinRoom }) {
   const [mode, setMode] = useState(null); // 'interview' | 'editor'
   const [copied, setCopied] = useState(false);
 
+  if (!user) return null;
+
+  const username = user.name || 'User';
+  const userAvatar = user.avatar || username.charAt(0).toUpperCase();
+  const userColor = user.avatarColor || '#6366f1';
+  const userEmail = user.email || '';
+
   const handleGenerate = () => {
     const code = Math.random().toString(36).substring(2, 9).toUpperCase();
     setRoomId(code);
@@ -23,7 +30,7 @@ export default function LobbyPage({ onJoinRoom }) {
   const handleJoin = (e) => {
     e.preventDefault();
     if (!roomId.trim() || !mode) return;
-    onJoinRoom({ roomId: roomId.trim(), username: user.name, mode });
+    onJoinRoom({ roomId: roomId.trim(), username: username, mode });
   };
 
   return (
@@ -40,13 +47,13 @@ export default function LobbyPage({ onJoinRoom }) {
           <span className="badge-ai">Gemini API</span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-          <div className="landing-user-chip" style={{ '--chip-color': user.avatarColor }}>
-            <span className="landing-user-avatar" style={{ background: user.avatarColor }}>
-              {user.avatar}
+          <div className="landing-user-chip" style={{ '--chip-color': userColor }}>
+            <span className="landing-user-avatar" style={{ background: userColor }}>
+              {userAvatar}
             </span>
             <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.2 }}>
-              <span style={{ fontWeight: 600, fontSize: '0.85rem' }}>{user.name}</span>
-              <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{user.email}</span>
+              <span style={{ fontWeight: 600, fontSize: '0.85rem' }}>{username}</span>
+              <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{userEmail}</span>
             </div>
           </div>
           <button
@@ -66,13 +73,13 @@ export default function LobbyPage({ onJoinRoom }) {
         <div className="lobby-welcome">
           <div
             className="lobby-avatar"
-            style={{ background: `linear-gradient(135deg, ${user.avatarColor}, ${user.avatarColor}88)` }}
+            style={{ background: `linear-gradient(135deg, ${userColor}, ${userColor}88)` }}
           >
-            {user.avatar}
+            {userAvatar}
           </div>
           <div>
             <h1 className="lobby-welcome-title">
-              Welcome back, <span style={{ color: user.avatarColor }}>{user.name.split(' ')[0]}</span>
+              Welcome back, <span style={{ color: userColor }}>{username.split(' ')[0]}</span>
             </h1>
             <p className="lobby-welcome-sub">
               Choose how you want to get started today

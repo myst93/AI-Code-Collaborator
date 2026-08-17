@@ -37,13 +37,25 @@ ${compilerOutput || 'None'}
       { role: 'user', parts: [{ text: prompt }] },
     ];
 
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.0-flash',
-      contents: contents,
-      config: {
-        systemInstruction: systemPrompt,
-      }
-    });
+    let response;
+    try {
+      response = await ai.models.generateContent({
+        model: 'gemini-3.6-flash',
+        contents: contents,
+        config: {
+          systemInstruction: systemPrompt,
+        }
+      });
+    } catch (modelErr) {
+      console.warn('gemini-3.6-flash model error, trying gemini-flash-latest fallback:', modelErr.message);
+      response = await ai.models.generateContent({
+        model: 'gemini-flash-latest',
+        contents: contents,
+        config: {
+          systemInstruction: systemPrompt,
+        }
+      });
+    }
 
     return res.json({ response: response.text });
   } catch (error) {

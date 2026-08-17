@@ -16,11 +16,13 @@ function App() {
 
   // ── Screen state machine ──────────────────────────────────────────────────
   // Initialize to 'lobby' immediately if user already authenticated (persisted)
-  const [screen, setScreen] = useState(() => {
+  const [screen, setScreen] = useState(function () {
     try {
       const saved = localStorage.getItem('devsync_user');
       return saved ? 'lobby' : 'landing';
-    } catch { return 'landing'; }
+    } catch (e) {
+      return 'landing';
+    }
   });
 
   // Sync screen with auth state changes
@@ -428,7 +430,7 @@ function App() {
     setIsInterviewMode(false);
     // Exit fullscreen if active
     if (document.fullscreenElement && document.exitFullscreen) {
-      document.exitFullscreen().catch(() => {});
+      document.exitFullscreen().catch(() => { });
     }
   };
 
