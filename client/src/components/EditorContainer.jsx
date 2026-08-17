@@ -1,6 +1,6 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import Editor from '@monaco-editor/react';
-import { Play, Code, ChevronDown, ChevronUp, Terminal } from 'lucide-react';
+import { Play, Code, ChevronDown, ChevronUp, Terminal, Square } from 'lucide-react';
 
 const LANGUAGES = [
   { id: 'javascript', name: 'JavaScript' },
@@ -9,6 +9,10 @@ const LANGUAGES = [
   { id: 'java', name: 'Java' },
   { id: 'go', name: 'Go' },
 ];
+
+const DEFAULT_TERMINAL_HEIGHT = 220;
+const MIN_TERMINAL_HEIGHT = 80;
+const MAX_TERMINAL_HEIGHT = 500;
 
 function EditorContainer({
   code,
@@ -23,15 +27,18 @@ function EditorContainer({
   onSendTerminalInput,
 }) {
   const [isTerminalCollapsed, setIsTerminalCollapsed] = useState(false);
-  const [terminalHeight, setTerminalHeight] = useState(220);
+  const [terminalHeight, setTerminalHeight] = useState(DEFAULT_TERMINAL_HEIGHT);
   const [terminalInput, setTerminalInput] = useState('');
   const isDraggingY = useRef(false);
   const consoleEndRef = useRef(null);
+  const containerRef = useRef(null);
 
   // Auto-scroll console to bottom when new logs stream in
   useEffect(() => {
-    consoleEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [compilerOutput.stdout, isCompiling, isTerminalCollapsed]);
+    if (!isTerminalCollapsed) {
+      consoleEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [compilerOutput.stdout, compilerOutput.system, isCompiling, isTerminalCollapsed]);
 
   const handleTerminalKeyDown = (e) => {
     if (e.key === 'Enter') {
@@ -39,6 +46,30 @@ function EditorContainer({
       setTerminalInput('');
     }
   };
+
+  // ── Vertical resize (terminal height) ──────────────────────────────────────
+  const handleResizeY = useCallback((e) => {
+    if (!isDraggingY.current) return;
+    e.preventDefault();
+
+    const containerEl = containerRef.current;
+    if (!containerEl) return;
+
+    const containerRect = containerEl.getBoundingClientRect();
+    // Height = distance from pointer to bottom of the container
+    const newHeight = containerRect.bottom - e.clientY;
+
+    if (newHeight >= MIN_TERMINAL_HEIGHT && newHeight <= MAX_TERMINAL_HEIGHT) {
+      setTerminalHeight(newHeight);
+    }
+  }, []);
+
+  const stopResizeY = useCallback(() => {
+    isDraggingY.current = false;
+    document.removeEventListener('pointermove', handleResizeY);
+    document.removeEventListener('pointerup', stopResizeY);
+    document.body.style.cursor = 'default';
+  }, [handleResizeY]);
 
   const startResizeY = (e) => {
     e.preventDefault();
@@ -48,27 +79,16 @@ function EditorContainer({
     document.body.style.cursor = 'row-resize';
   };
 
-  const handleResizeY = (e) => {
-    if (!isDraggingY.current) return;
-    const newHeight = window.innerHeight - e.clientY - 60;
-    if (newHeight > 100 && newHeight < 450) {
-      setTerminalHeight(newHeight);
-    }
-  };
-
-  const stopResizeY = () => {
-    isDraggingY.current = false;
-    document.removeEventListener('pointermove', handleResizeY);
-    document.removeEventListener('pointerup', stopResizeY);
-    document.body.style.cursor = 'default';
+  // Toggle collapse: restore to last terminalHeight when reopening
+  const handleToggleTerminal = () => {
+    setIsTerminalCollapsed((prev) => !prev);
   };
 
   const handleEditorChange = (value) => {
     onCodeChange(value || '');
   };
 
-  const handleEditorMount = (editor, monaco) => {
-    // Listen to cursor selection change events to sync cursors
+  const handleEditorMount = (editor) => {
     editor.onDidChangeCursorPosition((e) => {
       onCursorChange({
         lineNumber: e.position.lineNumber,
@@ -78,8 +98,8 @@ function EditorContainer({
   };
 
   return (
-    <>
-      {/* Code Editor Glass Frame */}
+    <div className="editor-column-inner" ref={containerRef}>
+      {/* ── Code Editor Glass Frame ── */}
       <div className="glass editor-wrapper">
         <div className="panel-header">
           <div className="panel-title">
@@ -88,7 +108,6 @@ function EditorContainer({
           </div>
 
           <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-            {/* Language Dropdown Selector */}
             <select
               className="language-select"
               value={language}
@@ -101,15 +120,25 @@ function EditorContainer({
               ))}
             </select>
 
-            <button
-              className="btn btn-success"
-              onClick={onRunCode}
-              disabled={isCompiling}
-              style={{ padding: '6px 14px', fontSize: '0.85rem' }}
-            >
-              <Play size={14} fill="currentColor" />
-              <span>{isCompiling ? 'Running...' : 'Run Code'}</span>
-            </button>
+            {isCompiling ? (
+              <button
+                className="btn btn-danger"
+                onClick={onStopCode}
+                style={{ padding: '6px 14px', fontSize: '0.85rem' }}
+              >
+                <Square size={13} fill="currentColor" />
+                <span>Stop</span>
+              </button>
+            ) : (
+              <button
+                className="btn btn-success"
+                onClick={onRunCode}
+                style={{ padding: '6px 14px', fontSize: '0.85rem' }}
+              >
+                <Play size={14} fill="currentColor" />
+                <span>Run Code</span>
+              </button>
+            )}
           </div>
         </div>
 
@@ -136,46 +165,50 @@ function EditorContainer({
         </div>
       </div>
 
-      {/* Horizontal Resize Handle */}
+      {/* ── Horizontal Resize Handle (only when terminal is open) ── */}
       {!isTerminalCollapsed && (
-        <div className="resize-handle-y" onPointerDown={startResizeY} />
+        <div
+          className="resize-handle-y"
+          onPointerDown={startResizeY}
+          title="Drag to resize terminal"
+        />
       )}
 
-      {/* Terminal Drawer Console */}
-      <div 
+      {/* ── Terminal Drawer Console ── */}
+      <div
         className={`glass terminal-wrapper ${isTerminalCollapsed ? 'collapsed' : ''}`}
-        style={{ height: isTerminalCollapsed ? '45px' : `${terminalHeight}px` }}
+        style={{
+          height: isTerminalCollapsed ? '45px' : `${terminalHeight}px`,
+          flexShrink: 0,
+        }}
       >
-        <div 
-          className="panel-header" 
-          style={{ cursor: 'pointer' }}
-          onClick={() => setIsTerminalCollapsed(!isTerminalCollapsed)}
+        {/* Terminal Header — click to toggle */}
+        <div
+          className="panel-header terminal-header-clickable"
+          onClick={handleToggleTerminal}
         >
           <div className="panel-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <Terminal size={16} />
             <span>Terminal</span>
             {isCompiling && (
-              <button 
-                className="btn btn-danger" 
-                onClick={(e) => { e.stopPropagation(); onStopCode(); }}
-                style={{ padding: '2px 8px', fontSize: '0.7rem', marginLeft: '12px' }}
-              >
-                Stop Code
-              </button>
+              <span className="terminal-running-badge">● Running</span>
             )}
           </div>
-
-          <div style={{ marginLeft: 'auto' }}>
+          <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <span className="terminal-toggle-hint">
+              {isTerminalCollapsed ? 'Click to expand' : 'Click to collapse'}
+            </span>
             {isTerminalCollapsed ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
           </div>
         </div>
 
+        {/* Terminal Body */}
         {!isTerminalCollapsed && (
           <div className="terminal-console">
             {compilerOutput.system && (
               <div className="terminal-line terminal-system">{compilerOutput.system}</div>
             )}
-            
+
             {compilerOutput.stdout && (
               <div className="terminal-line terminal-stdout" style={{ whiteSpace: 'pre-wrap' }}>
                 {compilerOutput.stdout}
@@ -183,31 +216,23 @@ function EditorContainer({
             )}
 
             {!compilerOutput.stdout && !compilerOutput.system && (
-              <div className="terminal-line terminal-system">Terminal idle. Click "Run Code" to compile and run.</div>
+              <div className="terminal-line terminal-system">
+                Terminal idle. Click "Run Code" to compile and run.
+              </div>
             )}
 
-            {/* Interactive Prompt Line */}
+            {/* Interactive stdin prompt */}
             {isCompiling && (
-              <div style={{ display: 'flex', alignItems: 'center', width: '100%', marginTop: '6px' }}>
-                <span style={{ color: 'var(--success)', marginRight: '8px', fontWeight: 'bold' }}>&gt;</span>
+              <div className="terminal-input-row" onClick={(e) => e.stopPropagation()}>
+                <span className="terminal-prompt-arrow">&gt;</span>
                 <input
                   type="text"
                   value={terminalInput}
                   onChange={(e) => setTerminalInput(e.target.value)}
                   onKeyDown={handleTerminalKeyDown}
-                  placeholder="Type input here and press Enter..."
-                  style={{
-                    flexGrow: 1,
-                    background: 'transparent',
-                    border: 'none',
-                    outline: 'none',
-                    color: '#ffffff',
-                    fontFamily: "'JetBrains Mono', monospace",
-                    fontSize: '0.85rem',
-                    padding: '0',
-                  }}
+                  placeholder="Type input and press Enter..."
+                  className="terminal-stdin-input"
                   autoFocus
-                  onClick={(e) => e.stopPropagation()} // Prevent collapse on prompt focus
                 />
               </div>
             )}
@@ -215,7 +240,7 @@ function EditorContainer({
           </div>
         )}
       </div>
-    </>
+    </div>
   );
 }
 
