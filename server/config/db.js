@@ -3,7 +3,8 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/devsync';
+// const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/devsync';
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://parthoberai39:<Uxposed12@>@cluster0.e3lpdhw.mongodb.net/?appName=Cluster0';
 
 let isDbConnected = false;
 

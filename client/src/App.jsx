@@ -8,7 +8,8 @@ import LandingPage from './components/LandingPage';
 import LobbyPage from './components/LobbyPage';
 import { useAuth } from './context/AuthContext';
 
-const SOCKET_URL = 'http://localhost:5000';
+// const SOCKET_URL = 'http://localhost:5000';
+const SOCKET_URL = 'https://codefusion-zj89.onrender.com';
 
 // Screen states: 'landing' | 'lobby' | 'room'
 function App() {
@@ -339,7 +340,7 @@ function App() {
     setAiChat((prev) => [...prev, userMessage]);
     setIsAiLoading(true);
     try {
-      const res = await fetch('http://localhost:5000/api/ai/chat', {
+      const res = await fetch('https://codefusion-zj89.onrender.com/api/ai/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
