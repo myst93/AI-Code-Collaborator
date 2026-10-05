@@ -1,8 +1,8 @@
-# 🚀 DevSync AI — Collaborative Code Editor
+# 🚀 CodeFusion — Collaborative Code Editor
 
 > **A real-time collaborative coding environment with integrated video interviews and an AI-powered Gemini assistant.**
 
-DevSync AI is a full-stack web application designed for technical interviews and pair programming. It combines a feature-rich Monaco-based code editor, live WebSocket synchronization, peer-to-peer WebRTC video calls, and a context-aware Gemini AI coding assistant — all in a single unified workspace.
+CodeFusion is a full-stack web application designed for technical interviews and pair programming. It combines a feature-rich Monaco-based code editor, live WebSocket synchronization, peer-to-peer WebRTC video calls, and a context-aware Gemini AI coding assistant — all in a single unified workspace.
 
 ---
 
@@ -57,7 +57,7 @@ DevSync AI is a full-stack web application designed for technical interviews and
 ## 🏗️ Architecture
 
 ```
-DevSync AI
+CodeFusion
 ├── client/          # React 19 + Vite frontend
 │   └── src/
 │       ├── App.jsx                  # Root component, socket & WebRTC orchestration
@@ -111,7 +111,7 @@ Make sure the following are installed on your system:
 ### 1. Clone the Repository
 
 ```bash
-git clone <your-repo-url>
+git clone https://github.com/myst93/AI-Code-Collaborator.git
 cd "Code Editor"
 ```
 
