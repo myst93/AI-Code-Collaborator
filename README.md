@@ -102,11 +102,44 @@ Make sure the following are installed on your system:
 | Java JDK    | v11+            | Java compilation & execution |
 | Go          | v1.20+          | Go code execution            |
 
-> **Note:** Only install the language runtimes you plan to use. JavaScript (Node.js) is required as it powers the server.
+> **Note:** When running with **Docker**, all language compilers and runtimes (Python, g++, JDK, Go) and MongoDB are automatically bundled and configured inside the containers—no manual host installs needed!
 
 ---
 
-## 🚀 Getting Started
+## 🐳 Quickstart with Docker (Recommended)
+
+Running DevSync with Docker Compose spins up MongoDB, the Backend with all 5 language compilers pre-installed, and the Frontend Nginx SPA with WebSocket reverse-proxy in seconds.
+
+### 1. Set your Gemini API Key
+
+Copy `.env.example` to `.env` (or configure `server/.env`):
+```bash
+cp .env.example .env
+```
+Add your free Gemini API key in `.env`:
+```env
+GEMINI_API_KEY=your_gemini_api_key_here
+```
+
+### 2. Build and Start the Stack
+
+```bash
+docker compose up --build
+```
+
+That's it!
+* **Frontend:** Open [http://localhost:3000](http://localhost:3000)
+* **Backend API:** [http://localhost:5000](http://localhost:5000)
+* **MongoDB:** Running at `localhost:27017` (data persisted in Docker volume `devsync_mongodb_data`)
+
+To stop:
+```bash
+docker compose down
+```
+
+---
+
+## 🛠️ Manual Setup without Docker (Alternative)
 
 ### 1. Clone the Repository
 

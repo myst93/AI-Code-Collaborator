@@ -252,7 +252,13 @@ export default function registerSocketHandler(io) {
 
         const child = spawn(runCmd, execArgs, {
           cwd: runDir,
-          env: { ...process.env, PATH: process.env.PATH }
+          env: {
+            PATH: process.env.PATH || '/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin',
+            LANG: 'C.UTF-8',
+            LC_ALL: 'C.UTF-8',
+            HOME: runDir,
+            TMPDIR: runDir,
+          }
         });
 
         activeProcesses[socket.id] = child;
@@ -291,8 +297,17 @@ export default function registerSocketHandler(io) {
 
       // Run compiler first if compile command is active
       if (compileCmd) {
-        socket.emit('terminal-output', `[System]: Compiling code...\n`);
-        exec(compileCmd, { cwd: runDir, timeout: 8000 }, (cErr, cStdout, cStderr) => {
+        exec(compileCmd, {
+          cwd: runDir,
+          timeout: 8000,
+          env: {
+            PATH: process.env.PATH || '/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin',
+            LANG: 'C.UTF-8',
+            LC_ALL: 'C.UTF-8',
+            HOME: runDir,
+            TMPDIR: runDir,
+          }
+        }, (cErr, cStdout, cStderr) => {
           if (cErr) {
             socket.emit('terminal-output', cStderr || cErr.message);
             socket.emit('terminal-exit', cErr.code || 1);

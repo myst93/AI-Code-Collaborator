@@ -1,0 +1,62 @@
+services:
+  mongodb:
+    image: mongo:7.0
+    container_name: devsync-mongodb
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    healthcheck:
+      test: ["CMD-SHELL", "echo 'db.runCommand(\"ping\").ok' | mongosh localhost:27017/test --quiet"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+    networks:
+      - devsync-network
+
+  server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: devsync-server
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    env_file:
+      - path: ./server/.env
+        required: false
+      - path: ./.env
+        required: false
+    environment:
+      - PORT=5000
+      - MONGODB_URI=${MONGODB_URI:-mongodb://mongodb:27017/devsync}
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    networks:
+      - devsync-network
+
+  client:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+    container_name: devsync-client
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    depends_on:
+      - server
+    networks:
+      - devsync-network
+
+volumes:
+  mongodb_data:
+    name: devsync_mongodb_data
+
+networks:
+  devsync-network:
+    name: devsync-network
+    driver: bridge

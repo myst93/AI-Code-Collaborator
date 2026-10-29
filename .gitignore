@@ -1,0 +1,28 @@
+# Dependencies
+node_modules/
+
+# Environment variables
+.env
+.env.local
+*.env
+
+# Build outputs
+dist/
+dist-ssr/
+
+# Temporary code runs & database directories
+temp_runs/
+.mongodb_data/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# IDE & OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

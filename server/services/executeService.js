@@ -63,6 +63,13 @@ export const executeCodeSync = ({ language, code, stdin }) => {
       cwd: runDir,
       timeout: 5000, // 5 seconds timeout limit to prevent loops hanging the thread
       maxBuffer: 1024 * 1024, // 1MB maximum buffer threshold
+      env: {
+        PATH: process.env.PATH || '/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin',
+        LANG: 'C.UTF-8',
+        LC_ALL: 'C.UTF-8',
+        HOME: runDir,
+        TMPDIR: runDir,
+      },
     };
 
     const cleanup = () => {
