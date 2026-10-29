@@ -1,229 +1,401 @@
-# 🚀 CodeFusion — Collaborative Code Editor
+# 🚀 CodeFusion (DevSync AI) — Collaborative Code Editor
 
-> **A real-time collaborative coding environment with integrated video interviews and an AI-powered Gemini assistant.**
+> **A real-time collaborative coding environment with integrated WebRTC video interviews and an AI-powered Gemini assistant.**
 
-CodeFusion is a full-stack web application designed for technical interviews and pair programming. It combines a feature-rich Monaco-based code editor, live WebSocket synchronization, peer-to-peer WebRTC video calls, and a context-aware Gemini AI coding assistant — all in a single unified workspace.
+CodeFusion is a full-stack platform engineered for live technical interviews, pair programming, and collaborative problem-solving. It integrates a feature-rich Monaco-based editor (VS Code engine), real-time WebSocket synchronization, multi-language sandbox code execution, peer-to-peer WebRTC video calls, and a context-aware Google Gemini AI coding assistant.
+
+---
+
+## 📑 Table of Contents
+
+- [✨ Features](#-features)
+- [🏗️ System Architecture](#️-system-architecture)
+- [📦 Docker Infrastructure](#-docker-infrastructure)
+  - [Client Dockerfile (Multi-Stage Build + Nginx)](#1-client-dockerfile-clientdockerfile)
+  - [Server Dockerfile (Multi-Language Sandbox)](#2-server-dockerfile-serverdockerfile)
+  - [Docker Compose Orchestration](#3-docker-compose-orchestration-docker-composeyml)
+- [⚙️ Environment Variables](#️-environment-variables)
+- [🐳 Local Quickstart with Docker](#-local-quickstart-with-docker-recommended)
+- [🛠️ Manual Local Setup (Without Docker)](#️-manual-local-setup-without-docker)
+- [☁️ AWS Deployment Guide (EC2 + Docker)](#️-aws-deployment-guide-ec2--docker)
+  - [1. Launch an EC2 Instance](#step-1-launch-an-aws-ec2-instance)
+  - [2. Configure Security Group Rules](#step-2-configure-security-group-inbound-rules)
+  - [3. Connect via SSH](#step-3-connect-to-your-instance-via-ssh)
+  - [4. Install Docker & Docker Compose](#step-4-install-docker--docker-compose)
+  - [5. Clone & Configure the Project](#step-5-clone-and-configure-the-project)
+  - [6. Build & Launch Containers](#step-6-build-and-launch-containers)
+  - [7. Production Port 80 Mapping & SSL](#step-7-production-port-80-mapping--ssl)
+- [🔌 API & WebSocket Reference](#-api--websocket-reference)
+- [🔒 Security & Sandbox Isolation](#-security--sandbox-isolation)
+- [📄 License](#-license)
 
 ---
 
 ## ✨ Features
 
 ### 🖥️ Collaborative Code Editor
-- **Real-time code sync** — changes are instantly broadcast to all room participants via Socket.IO
-- **Monaco Editor** (VS Code engine) with syntax highlighting for all supported languages
-- **Shared language selection** — switching language syncs across all connected clients
-- **Cursor presence** — see where collaborators are editing in real time
+- **Real-Time Code Sync**: Instant character-by-character broadcasting to all room members via Socket.IO.
+- **Monaco Editor Engine**: Powers VS Code with intelligent code formatting, bracket matching, and syntax highlighting.
+- **Synced Language Selection**: Seamless switching across JavaScript, Python, C++, Java, and Go synced in real time.
+- **Collaborative Presence**: Live remote cursor tracking and user presence indicators.
 
-### ▶️ Code Execution Engine
-- **Streaming execution** — run code and see output streamed live to all room participants via socket events
-- **REST execution** — synchronous buffered execution endpoint for one-shot runs
-- **Interactive terminal** — send standard input (`stdin`) to running processes mid-execution
-- **Sandboxed environment** — temporary per-run directories with a 5-second timeout and 1 MB output limit to prevent abuse
-- **Multi-language support:**
+### ▶️ Multi-Language Execution Engine
+- **Streaming Execution**: Real-time stdout/stderr streamed directly through WebSockets to an interactive terminal.
+- **One-Shot REST Execution**: Buffered POST endpoint (`/api/execute`) for programmatic testing.
+- **Interactive Stdin**: Full bi-directional stdin support mid-execution for console input prompts.
+- **Sandboxed Security**: Isolated execution scratch spaces with a 5-second process timeout and 1 MB output cap.
 
-| Language   | Compiler / Runtime |
-|------------|--------------------|
-| JavaScript | Node.js            |
-| Python     | Python 3           |
-| C++        | g++                |
-| Java       | javac / java       |
-| Go         | go run             |
+| Supported Language | Runtime / Compiler | Version Included in Docker |
+|--------------------|--------------------|----------------------------|
+| **JavaScript**     | Node.js            | v20 LTS                    |
+| **Python**         | Python 3           | 3.11+                      |
+| **C++**            | g++ (GCC)          | 12+                        |
+| **Java**           | OpenJDK            | 17+ Headless               |
+| **Go**             | Go Compiler        | 1.22+                      |
 
-### 🤖 Gemini AI Assistant
-- **Context-aware chat** — the AI receives the current code and terminal output as context on every message
-- **Persistent conversation history** — multi-turn chat with full history forwarded to the Gemini API
-- **Quick Actions:**
-  - 🔍 **Explain** — breaks down the code's logic and performance characteristics
-  - 🐛 **Debug** — finds syntax bugs, logical edge-cases, and resolves compiler errors first
-  - ⚡ **Optimize** — proposes time/space complexity improvements with a refactored version
-- Powered by **Gemini 2.0 Flash** via `@google/genai`
+### 🤖 Context-Aware Gemini AI Assistant
+- **Context Injection**: Gemini automatically analyzes current editor code and terminal output with zero manual copy-pasting.
+- **Multi-Turn Chat**: Preserves conversation history for follow-up questions and iterative refactoring.
+- **Quick Actions**:
+  - 🔍 **Explain**: Line-by-line logic breakdown and algorithmic complexity analysis.
+  - 🐛 **Debug**: Detects syntax bugs, logical edge-cases, and fixes runtime errors.
+  - ⚡ **Optimize**: Generates Big-O performance optimizations and cleaner implementations.
+- Powered by Google Gemini 2.0 Flash via `@google/genai`.
 
-### 📹 Video Interview Mode
-- **WebRTC peer-to-peer video** — full mesh topology (every participant connects directly to every other)
-- **Interview Mode** — enters fullscreen with a live video grid visible alongside the editor
-- **Mic & Camera controls** — mute/unmute audio and video independently at any time
-- **Auto-teardown** — webcam and microphone are released when exiting Interview Mode
+### 📹 WebRTC Video Interview Mode
+- **Full Mesh Video Calling**: Low-latency, peer-to-peer browser video and audio streams using WebRTC.
+- **Interview Mode**: Expands into an interview workspace layout with full-screen code and interactive video tiles.
+- **Media Toggles**: Independent hardware toggles for microphone mute and camera feed disabling.
+- **Resource Cleanup**: Automated webcam and microphone stream release upon room exit.
 
-### 💬 Room Chat
-- **Shared room chat** — send and receive messages in a room-scoped chat panel
-- **Chat history persistence** — MongoDB stores chat history per room so late joiners catch up automatically
-
-### 🗄️ Room Persistence (MongoDB)
-- Room state (code, language, chat history) is persisted to MongoDB
-- New users joining an existing room receive the current state immediately on connect
+### 💬 Room Chat & Persistence
+- **Room-Scoped Messaging**: Instant in-room team chat.
+- **MongoDB Persistence**: Room code, language selections, and chat records persist in MongoDB so late joiners catch up instantly.
 
 ---
 
-## 🏗️ Architecture
+## 🏗️ System Architecture
 
 ```
-CodeFusion
-├── client/          # React 19 + Vite frontend
+CodeFusion Workspace
+├── client/                      # React 19 + Vite Frontend
+│   ├── Dockerfile               # Multi-stage production build (Node + Nginx)
+│   ├── nginx.conf               # Reverse-proxy config for SPA routing & WebSockets
 │   └── src/
-│       ├── App.jsx                  # Root component, socket & WebRTC orchestration
+│       ├── App.jsx              # Main app controller, Socket.IO & WebRTC mesh coordinator
+│       ├── context/AuthContext  # Client authentication state provider
 │       └── components/
-│           ├── EditorContainer.jsx  # Monaco editor + compile panel
-│           ├── AIPanel.jsx          # Gemini AI chat + room chat tabs
-│           └── VideoGrid.jsx        # WebRTC video tile grid
+│           ├── EditorContainer  # Monaco code editor & interactive terminal
+│           ├── AIPanel          # Gemini assistant tabs & room chat
+│           └── VideoGrid        # WebRTC video tile matrix
 │
-└── server/          # Node.js + Express + Socket.IO backend
-    ├── index.js                     # App entry, server bootstrap
-    ├── config/
-    │   ├── db.js                    # MongoDB connection (Mongoose)
-    │   └── ai.js                    # Gemini AI client initialisation
-    ├── models/
-    │   └── Room.js                  # Room schema (code, language, chatHistory)
-    ├── controllers/
-    │   ├── aiController.js          # POST /api/ai/chat — Gemini API bridge
-    │   └── executeController.js     # POST /api/execute — sync code execution
-    ├── routes/
-    │   ├── aiRoutes.js
-    │   ├── executeRoutes.js
-    │   └── healthRoutes.js
-    ├── services/
-    │   └── executeService.js        # Code sandboxing (sync + streaming modes)
-    └── sockets/
-        └── socketHandler.js         # All real-time Socket.IO event handling
+├── server/                      # Node.js + Express + Socket.IO Backend
+│   ├── Dockerfile               # Multi-language compiler & execution container
+│   ├── index.js                 # Server entry point & HTTP/WebSocket server
+│   ├── config/
+│   │   ├── db.js                # MongoDB connection handler (Mongoose)
+│   │   └── ai.js                # Gemini API initialization
+│   ├── controllers/
+│   │   ├── aiController.js      # AI prompt processing & streaming
+│   │   └── executeController.js # Synchronous execution controller
+│   ├── services/
+│   │   └── executeService.js    # Child process sandbox execution engine
+│   └── sockets/
+│       └── socketHandler.js     # Real-time room events, cursors, and WebRTC signaling
+│
+└── docker-compose.yml           # Unified orchestration for MongoDB, Server & Client
 ```
 
 ---
 
-## ⚙️ Prerequisites
+## 📦 Docker Infrastructure
 
-Make sure the following are installed on your system:
+The project includes production-ready Dockerfiles and a Compose specification that completely eliminates manual dependency installation.
 
-| Dependency  | Minimum Version | Purpose                      |
-|-------------|-----------------|------------------------------|
-| Node.js     | v18+            | Server & client runtime      |
-| npm         | v9+             | Package management           |
-| MongoDB     | v6+ (local)     | Room state persistence       |
-| Python 3    | v3.8+           | Python code execution        |
-| g++         | v11+            | C++ compilation              |
-| Java JDK    | v11+            | Java compilation & execution |
-| Go          | v1.20+          | Go code execution            |
+### 1. Client Dockerfile (`client/Dockerfile`)
+Uses an efficient **multi-stage build**:
+1. **Build Stage (`node:22-alpine`)**: Installs dependencies and bundles the React application via Vite (`npm run build`).
+2. **Production Stage (`nginx:alpine`)**: Copies the compiled static assets into Nginx and configures an internal reverse proxy:
+   - `/` serves the React Single Page Application (`try_files $uri /index.html`).
+   - `/api/` seamlessly proxies REST API requests to the backend container (`http://server:5000/api/`).
+   - `/socket.io/` handles WebSocket upgrades with sticky sessions (`proxy_set_header Upgrade $http_upgrade`).
+   - Eliminates CORS issues and hardcoded host URLs in production.
 
-> **Note:** When running with **Docker**, all language compilers and runtimes (Python, g++, JDK, Go) and MongoDB are automatically bundled and configured inside the containers—no manual host installs needed!
+### 2. Server Dockerfile (`server/Dockerfile`)
+Built on `node:20-bookworm-slim` to provide an all-in-one execution sandbox:
+- Pre-installs **Python 3**, **GCC/G++**, **Default JDK Headless**, and **Go (golang-go)**.
+- Creates an isolated `/app/temp_runs` execution directory with restricted access.
+- Runs with production node settings (`NODE_ENV=production`).
+
+### 3. Docker Compose Orchestration (`docker-compose.yml`)
+Spins up three connected services on a private bridge network (`devsync-network`):
+- **`mongodb`**: Official `mongo:7.0` container with a persistent volume (`devsync_mongodb_data`) and built-in healthcheck.
+- **`server`**: Built from `./server`, waits for MongoDB healthcheck confirmation before starting.
+- **`client`**: Built from `./client`, exposes port `3000` (or `80` in production) and routes API/WebSocket traffic internally to `server:5000`.
 
 ---
 
-## 🐳 Quickstart with Docker (Recommended)
+## ⚙️ Environment Variables
 
-Running DevSync with Docker Compose spins up MongoDB, the Backend with all 5 language compilers pre-installed, and the Frontend Nginx SPA with WebSocket reverse-proxy in seconds.
+Copy `.env.example` to create your root environment file:
 
-### 1. Set your Gemini API Key
-
-Copy `.env.example` to `.env` (or configure `server/.env`):
 ```bash
 cp .env.example .env
 ```
-Add your free Gemini API key in `.env`:
+
+| Variable | Default Value | Description |
+|---|---|---|
+| `PORT` | `5000` | Port for the Express backend server |
+| `GEMINI_API_KEY` | *(Required)* | Google Gemini API key ([Get one free from AI Studio](https://aistudio.google.com/)) |
+| `MONGODB_URI` | `mongodb://mongodb:27017/devsync` | MongoDB connection URI (`mongodb://localhost:27017/devsync` for local host runs) |
+| `VITE_SOCKET_URL` | *(Optional)* | Backend URL for client. In Docker/Nginx setups, this defaults automatically to current origin (`window.location.origin`) |
+
+---
+
+## 🐳 Local Quickstart with Docker (Recommended)
+
+Running with Docker Compose installs all language compilers, spins up MongoDB, builds the client, and launches the entire stack in one command.
+
+### 1. Configure `.env`
+```bash
+cp .env.example .env
+```
+Open `.env` and paste your Gemini API key:
 ```env
-GEMINI_API_KEY=your_gemini_api_key_here
+GEMINI_API_KEY=AIzaSy...
 ```
 
-### 2. Build and Start the Stack
-
+### 2. Start the Stack
 ```bash
 docker compose up --build
 ```
 
-That's it!
-* **Frontend:** Open [http://localhost:3000](http://localhost:3000)
-* **Backend API:** [http://localhost:5000](http://localhost:5000)
-* **MongoDB:** Running at `localhost:27017` (data persisted in Docker volume `devsync_mongodb_data`)
+### 3. Access the Application
+- **Frontend App**: [http://localhost:3000](http://localhost:3000)
+- **Backend API**: [http://localhost:5000](http://localhost:5000)
+- **Health Check**: [http://localhost:5000/health](http://localhost:5000/health)
 
-To stop:
+To run in the background (detached mode):
+```bash
+docker compose up -d --build
+```
+
+To stop containers:
 ```bash
 docker compose down
 ```
 
 ---
 
-## 🛠️ Manual Setup without Docker (Alternative)
+## 🛠️ Manual Local Setup (Without Docker)
 
-### 1. Clone the Repository
+If you prefer to run services directly on your host machine:
 
+### 1. Prerequisites
+- **Node.js**: v18+ & **npm**: v9+
+- **MongoDB**: v6+ running locally (`sudo systemctl start mongod` or `mongod --dbpath /data/db`)
+- Language runtimes for code execution: `python3`, `g++`, `default-jdk`, `golang-go`
+
+### 2. Setup Server
 ```bash
-git clone https://github.com/myst93/AI-Code-Collaborator.git
-cd "Code Editor"
-```
-
-### 2. Configure the Server
-
-```bash
-cd server
-cp .env.example .env   # or edit .env directly
-```
-
-Edit `server/.env`:
-
-```env
-PORT=5000
-GEMINI_API_KEY=your_gemini_api_key_here
-MONGODB_URI=mongodb://localhost:27017/devsync
-```
-
-> Get a free Gemini API key at [Google AI Studio](https://aistudio.google.com/app/apikey).
-
-### 3. Install Dependencies
-
-```bash
-# Install server dependencies
 cd server
 npm install
+cp ../.env.example .env
+# Ensure MONGODB_URI=mongodb://localhost:27017/devsync and GEMINI_API_KEY are configured
+npm run dev
+```
 
-# Install client dependencies
+### 3. Setup Client
+```bash
 cd ../client
 npm install
-```
-
-### 4. Start MongoDB
-
-Make sure your local MongoDB instance is running:
-
-```bash
-mongod --dbpath ./data/db
-# or with systemd:
-sudo systemctl start mongod
-```
-
-### 5. Run the Application
-
-Open two terminals:
-
-**Terminal 1 — Backend:**
-```bash
-cd server
 npm run dev
-# Server starts at http://localhost:5000
 ```
-
-**Terminal 2 — Frontend:**
-```bash
-cd client
-npm run dev
-# Client starts at http://localhost:5173
-```
-
-Open [http://localhost:5173](http://localhost:5173) in your browser.
+Client runs at [http://localhost:5173](http://localhost:5173).
 
 ---
 
-## 🔌 API Reference
+## ☁️ AWS Deployment Guide (EC2 + Docker)
+
+This guide walks through deploying CodeFusion on an **AWS EC2** instance using Docker and Docker Compose.
+
+```
+                    ┌────────────────────────────────────────────────────────┐
+                    │                    AWS EC2 Instance                    │
+                    │                                                        │
+ Internet           │   ┌────────────────┐      ┌────────────────────────┐   │
+ ─────────► [Port 80] ─►│ devsync-client │ ────►│ devsync-server         │   │
+ (Browser)          │   │ (Nginx :80)    │ /api │ (Node.js :5000)        │   │
+                    │   └────────────────┘ /ws  └───────────┬────────────┘   │
+                    │                                       │                │
+                    │                                       ▼                │
+                    │                           ┌────────────────────────┐   │
+                    │                           │ devsync-mongodb        │   │
+                    │                           │ (MongoDB :27017)       │   │
+                    │                           └────────────────────────┘   │
+                    └────────────────────────────────────────────────────────┘
+```
+
+### Step 1: Launch an AWS EC2 Instance
+1. Log in to the **AWS Management Console** and navigate to **EC2** > **Launch Instance**.
+2. **Name**: `codefusion-app` (or your preferred name).
+3. **AMI**: **Amazon Linux 2023 AMI** or **Ubuntu Server 24.04 LTS**.
+4. **Instance Type**: `t3.small` or `t3.medium` (recommended, as compiling C++/Java/Go requires sufficient RAM and CPU).
+5. **Key Pair**: Select or create a new key pair (e.g., `codefusion.pem`) and download it.
+6. **Storage**: At least **20 GB** gp3 SSD (to hold Docker images, compilers, and MongoDB data).
+
+### Step 2: Configure Security Group Inbound Rules
+Ensure your EC2 Security Group permits the following inbound traffic:
+
+| Type | Protocol | Port Range | Source | Purpose |
+|---|---|---|---|---|
+| **SSH** | TCP | `22` | `My IP` (or `0.0.0.0/0`) | Remote terminal administration |
+| **HTTP** | TCP | `80` | `0.0.0.0/0` | Public web app access (Nginx) |
+| **HTTPS** | TCP | `443` | `0.0.0.0/0` | Secure SSL web access |
+| **Custom TCP** | TCP | `3000` | `0.0.0.0/0` | *(Optional)* Direct client testing port |
+
+> **Security Note:** Keep port `27017` (MongoDB) closed to the public Internet. The containers communicate privately inside the Docker bridge network.
+
+### Step 3: Connect to your Instance via SSH
+Set key permissions on your local machine and connect:
+
+```bash
+chmod 400 ~/Downloads/codefusion.pem
+ssh -i ~/Downloads/codefusion.pem ec2-user@<YOUR-EC2-PUBLIC-IP>
+```
+*(If using Ubuntu, use `ubuntu@<YOUR-EC2-PUBLIC-IP>` instead of `ec2-user`).*
+
+### Step 4: Install Docker & Docker Compose
+
+#### On Amazon Linux 2023:
+```bash
+# Update packages
+sudo dnf update -y
+
+# Install Docker
+sudo dnf install -y docker git
+sudo systemctl enable --now docker
+
+# Add your user to the docker group
+sudo usermod -aG docker $USER
+
+# Install Docker Compose plugin
+sudo mkdir -p /usr/local/lib/docker/cli-plugins/
+sudo curl -SL https://github.com/docker/compose/releases/latest/download/docker-compose-linux-x86_64 -o /usr/local/lib/docker/cli-plugins/docker-compose
+sudo chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
+
+# Re-login to apply group permissions
+newgrp docker
+```
+
+#### On Ubuntu:
+```bash
+sudo apt update && sudo apt install -y ca-certificates curl gnupg git
+sudo install -m 0755 -d /etc/apt/keyrings
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+sudo chmod a+r /etc/apt/keyrings/docker.gpg
+
+echo "deb [arch="$(dpkg --print-architecture)" signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu "$(. /etc/os-release && echo "$VERSION_CODENAME")" stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+
+sudo apt update
+sudo apt install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+sudo usermod -aG docker $USER
+newgrp docker
+```
+
+Verify installation:
+```bash
+docker --version
+docker compose version
+```
+
+### Step 5: Clone and Configure the Project
+
+```bash
+# Clone the repository
+git clone https://github.com/myst93/AI-Code-Collaborator.git
+cd AI-Code-Collaborator
+
+# Create .env from template
+cp .env.example .env
+```
+
+Edit your `.env` file with your credentials:
+```bash
+nano .env
+```
+Provide your actual Gemini API key:
+```env
+PORT=5000
+GEMINI_API_KEY=AIzaSyYourActualKeyHere
+MONGODB_URI=mongodb://mongodb:27017/devsync
+```
+
+### Step 6: Build and Launch Containers
+
+Run the compose command in detached mode:
+```bash
+docker compose up -d --build
+```
+
+Monitor container health and status:
+```bash
+docker compose ps
+```
+
+View real-time aggregated logs:
+```bash
+docker compose logs -f
+```
+
+### Step 7: Production Port 80 Mapping & SSL
+
+By default, the client container binds to `3000:80`. To serve your application directly on standard HTTP port 80:
+
+1. Update the `client` section in [docker-compose.yml](file:///home/oberai/Projects/Code%20Editor/docker-compose.yml):
+   ```yaml
+   client:
+     build:
+       context: ./client
+       dockerfile: Dockerfile
+     container_name: devsync-client
+     restart: unless-stopped
+     ports:
+       - "80:80"       # Map port 80 directly
+     depends_on:
+       - server
+     networks:
+       - devsync-network
+   ```
+2. Re-deploy:
+   ```bash
+   docker compose up -d
+   ```
+3. Open `http://<YOUR-EC2-PUBLIC-IP>` in your browser!
+
+#### Enabling SSL / HTTPS with Let's Encrypt (Recommended for WebRTC Camera/Mic)
+Browsers require a secure context (`https://` or `localhost`) to access webcams and microphones via `getUserMedia()`. For production video calls on AWS:
+
+1. Point your domain (e.g. `codefusion.yourdomain.com`) to your EC2 Public IP via an **A Record** in your DNS provider (Route 53, Cloudflare, Namecheap, etc.).
+2. You can terminate SSL via an **AWS Application Load Balancer (ALB)** with a free AWS Certificate Manager (ACM) certificate, or install **Certbot** with host Nginx reverse proxy.
+
+---
+
+## 🔌 API & WebSocket Reference
 
 ### REST Endpoints
 
-| Method | Endpoint         | Description                              |
-|--------|------------------|------------------------------------------|
-| GET    | `/health`        | Server health check                      |
-| POST   | `/api/execute`   | Synchronous code execution (buffered)    |
-| POST   | `/api/ai/chat`   | Send a prompt to the Gemini AI assistant |
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/health` | Service health status check |
+| `POST` | `/api/execute` | Synchronous buffered code execution |
+| `POST` | `/api/ai/chat` | Context-aware AI prompt completion |
 
 #### `POST /api/execute`
 ```json
 {
   "language": "python",
-  "code": "print('Hello, World!')",
+  "code": "print('Hello, CodeFusion!')",
   "stdin": ""
 }
 ```
@@ -231,77 +403,78 @@ Open [http://localhost:5173](http://localhost:5173) in your browser.
 #### `POST /api/ai/chat`
 ```json
 {
-  "prompt": "Explain this code",
-  "code": "// current editor content",
+  "prompt": "Optimize this sorting algorithm",
+  "code": "function bubbleSort(arr) { ... }",
   "compilerOutput": "STDOUT:\n...\nSTDERR:\n...",
-  "history": [{ "role": "user", "content": "..." }]
+  "history": []
 }
 ```
 
-### Socket.IO Events
+### Socket.IO Real-Time Events
 
 #### Client → Server
-
-| Event             | Payload                                         | Description                        |
-|-------------------|-------------------------------------------------|------------------------------------|
-| `join-room`       | `{ roomId, username }`                          | Join or create a room              |
-| `code-change`     | `{ roomId, code }`                              | Broadcast a code update            |
-| `language-change` | `{ roomId, language }`                          | Broadcast a language switch        |
-| `cursor-change`   | `{ roomId, cursor, username }`                  | Broadcast cursor position          |
-| `run-code`        | `{ language, code }`                            | Start streaming code execution     |
-| `stop-code`       | —                                               | Kill the running process           |
-| `terminal-input`  | `string`                                        | Send stdin to the running process  |
-| `chat-message`    | `{ roomId, message, username }`                 | Send a room chat message           |
-| `webrtc-signal`   | `{ roomId, targetSocketId, signalData }`        | Forward WebRTC SDP / ICE signal    |
+| Event | Payload | Description |
+|---|---|---|
+| `join-room` | `{ roomId, username }` | Join or initialize collaborative room session |
+| `code-change` | `{ roomId, code }` | Broadcast live code change |
+| `language-change` | `{ roomId, language }` | Synchronize selected programming language |
+| `cursor-change` | `{ roomId, cursor, username }` | Broadcast live cursor coordinates |
+| `run-code` | `{ language, code }` | Trigger streaming compilation and execution |
+| `stop-code` | — | Abort currently running execution process |
+| `terminal-input` | `string` | Send stdin characters to active child process |
+| `chat-message` | `{ roomId, message, username }` | Broadcast team chat message |
+| `webrtc-signal` | `{ roomId, targetSocketId, signalData }` | WebRTC SDP offer/answer/ICE candidate relay |
 
 #### Server → Client
-
-| Event             | Payload                                         | Description                          |
-|-------------------|-------------------------------------------------|--------------------------------------|
-| `room-users`      | `User[]`                                        | Updated list of room participants    |
-| `initial-code`    | `{ code, language, chatHistory }`               | Room state on join                   |
-| `code-update`     | `string`                                        | Incoming code change from a peer     |
-| `language-update` | `string`                                        | Incoming language change from a peer |
-| `terminal-output` | `string`                                        | Streamed stdout chunk                |
-| `terminal-exit`   | `number`                                        | Process exit code                    |
-| `chat-message`    | `{ id, username, message, timestamp }`          | Incoming room chat message           |
-| `user-left`       | `{ socketId, username }`                        | A participant disconnected           |
-| `webrtc-signal`   | `{ senderSocketId, signalData }`                | Forwarded WebRTC signal              |
-
----
-
-## 🗂️ Tech Stack
-
-| Layer      | Technology                          |
-|------------|-------------------------------------|
-| Frontend   | React 19, Vite 8, Monaco Editor     |
-| Styling    | Vanilla CSS (glassmorphism dark UI) |
-| Icons      | Lucide React                        |
-| Real-time  | Socket.IO (client + server)         |
-| Video      | WebRTC (native browser API)         |
-| Backend    | Node.js, Express 4                  |
-| Database   | MongoDB + Mongoose 8                |
-| AI         | Google Gemini 2.0 Flash             |
-| Linting    | OxLint                              |
+| Event | Payload | Description |
+|---|---|---|
+| `room-users` | `User[]` | Active connected user list |
+| `initial-code` | `{ code, language, chatHistory }` | Initial room state delivered on connection |
+| `code-update` | `string` | Synchronized code content from peer |
+| `language-update` | `string` | Updated editor syntax language |
+| `terminal-output` | `string` | Streamed stdout/stderr chunk |
+| `terminal-exit` | `number` | Exit code when process completes |
+| `chat-message` | `{ id, username, message, timestamp }` | Incoming room message |
+| `webrtc-signal` | `{ senderSocketId, signalData }` | Routed WebRTC signal |
+| `user-left` | `{ socketId, username }` | Participant disconnect notification |
 
 ---
 
-## 🔒 Security Notes
+## 🔒 Security & Sandbox Isolation
 
-- The server uses a **5-second execution timeout** and **1 MB output cap** to prevent runaway scripts.
-- Code is executed in **isolated temporary directories** that are cleaned up after each run.
-- In production, restrict the CORS `origin` in `server/index.js` to your specific frontend domain.
-- **Never commit your `.env` file** — it contains your Gemini API key and MongoDB credentials.
-- WebRTC STUN servers use Google's public STUN (`stun.l.google.com`). For production, consider adding a TURN server for NAT traversal reliability.
+- **Execution Timeout**: Enforced hard 5-second process timeout kills runaway infinite loops and CPU-hogging scripts.
+- **Output Buffering Cap**: Maximum 1 MB buffer limit prevents memory exhaustion from flood logging.
+- **Filesystem Isolation**: Code executions run in unique, temporary working directories created on-the-fly and wiped immediately after execution.
+- **Container Isolation**: In Docker mode, compiler toolchains execute completely segregated from the host operating system.
+- **Protected Database Layer**: MongoDB is isolated inside the private Docker bridge network and not exposed externally.
+
+---
+
+## 🛠️ Maintenance & Troubleshooting Commands
+
+```bash
+# View running containers and resource usage
+docker stats
+
+# Follow server logs in real time
+docker compose logs -f server
+
+# Restart only the backend service
+docker compose restart server
+
+# Rebuild only the frontend after code edits
+docker compose build client && docker compose up -d client
+
+# Clean up stopped containers, unused networks, and dangling images
+docker system prune -f
+```
 
 ---
 
 ## 📄 License
 
-This project is open source. See [LICENSE](LICENSE) for details.
-
----
+This project is licensed under the MIT License. See [LICENSE](LICENSE) for details.
 
 <div align="center">
-  Built with ❤️ — DevSync AI
+  <sub>Built with ❤️ for real-time collaboration and seamless technical interviews.</sub>
 </div>
